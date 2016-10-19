@@ -6,15 +6,15 @@
 N = 100
 
 # lambda(r) = lambda_0 * (1 - r^alpha)
-lambda_0 = 1.0
-alpha = 4.0 #1.0
+lambda_0 = 4.0
+alpha = 1.0
 
 # P(r) = (1 - r^p1)^(p2 - 1)
 p1 = 3.56155
 p2 = 2.0
 
 # beta_0 = beta_theta * B_theta(r=1)^2 / (2 ∫ r⋅P(r) dr)
-beta_theta = 4.0 # 0.1
+beta_theta = 0.1
 
 # Number of iterations to find beta_0 from beta_theta
 m = 4

@@ -23,9 +23,9 @@ def gradB(r, B, beta0, p1, p2, alpha, lmbda0):
 	gradPnorm = gradP(r, beta0, p1, p2) / (B_phi**2 + B_theta**2)
 	lmbda1 = lmbda(r, alpha, lmbda0)
 	gradB_phi = (-lmbda1 * B_theta) - gradPnorm * B_phi
-	gradB_theta = (lmbda1 * B_phi) - B_theta * (1 + gradPnorm)
-	if r < 1e-20:
-		gradB_theta = lmbda1 * B_phi / 2
+	gradB_theta = lmbda1 * B_phi
+	if r > 1e-20:
+		gradB_theta -= B_theta * (1/r + gradPnorm)
 	return [gradB_phi, gradB_theta]
 
 def run():
@@ -67,7 +67,8 @@ def run():
 	plt.plot(r, B)
 	plt.xlabel("r")
 	plt.ylabel("magnetic field")
-	plt.legend(["B_phi", r"B_theta"], loc="center left")
+	plt.legend(["B_phi", r"B_theta"])
+	plt.grid()
 	plt.show()
 
 if __name__ == "__main__":
