@@ -2,19 +2,61 @@
 # Imène Goumiri
 # October 16, 2016
 
-# Size of grid
-N = 100
-
-# lambda(r) = lambda_0 * (1 - r^alpha)
-lambda_0 = 4.0
-alpha = 1.0
-
-# P(r) = (1 - r^p1)^(p2 - 1)
-p1 = 3.56155
-p2 = 2.0
-
 # beta_0 = beta_theta * B_theta(r=1)^2 / (2 ∫ r⋅P(r) dr)
-beta_theta = 0.1
+beta_theta = 0.7
 
-# Number of iterations to find beta_0 from beta_theta
-m = 4
+# Mock parameters
+mu0 = 0.000001256637061 # pi * 4e-7
+aspect_ratio = 3.0 # aspect ratio
+a = 0.5 # minor radius, also same as minor_b for MST
+zneo = 1.5 # trapped electron enhancement
+zeff = 2.6 # used to match an MST data set
+
+# Simulation mode
+mode = "STD_400KA"
+
+[pressure]
+	# p(r) = p(0) * (1 - r^c1)^c2
+	c1 = 3.561552813 # c1 = (3 + sqrt(17)) / 2
+	c2 = 2.0
+
+[rho]
+	min = 0.0
+	max = 1.0
+	ndiv = 50 # => step = 0.02
+
+[time]
+	t0 = 0.0
+	tf = 0.1
+	dt = 1.0e-5
+	# ndiv = 10_000
+
+[alpha]
+	min = 3.5
+	max = 4.5
+	ndiv = 4
+
+[lambda_0]
+	min = 0.0
+	max = 4.0
+	# ndiv = 400 # => step = 0.01
+	ndiv = 40 # => step = 0.1
+
+[initial]
+	I_phi = 100.0
+
+[STD_400KA]
+	flux_ref = 0.0306 # reference toroidal flux, in Wb
+	flux_multiplier = 1.0
+	density_ref = 1.0e19 # reference plasma density
+	density_multiplier = 1.0
+[STD_400KA.toroidal] # phi
+	time = [0.0, 0.010, 0.017, 0.023, 0.032, 0.037, 0.085, 1.0]
+	voltage = [180.0, 37.0, 27.0, 9.0, 25.0, -4.0, 0.0, 0.0]
+	DC_voltage = 0.0
+[STD_400KA.poloidal] # theta
+	time = [0.0, 0.012, 0.032, 0.04, 0.06, 0.07, 0.077, 0.08, 1.0]
+	voltage = [-7.0, -0.5, -0.3, 1.2, 1.7, 2.0, 5.5, 0.0, 0.0]
+[STD_400KA.anomalous] # anom
+	time = [0.0, 0.012, 1.0]
+	voltage = [3.0, 1.0, 1.0]
