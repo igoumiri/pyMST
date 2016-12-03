@@ -27,9 +27,7 @@ def gradB(r, B, lmbda0, alpha, beta0, c1, c2):
 	gradP_norm = gradP(r, beta0, c1, c2) / (B_phi**2 + B_theta**2)
 	lmbda1 = lmbda(r, alpha, lmbda0)
 	gradB_phi = (-lmbda1 * B_theta) - gradP_norm * B_phi
-	gradB_theta = lmbda1 * B_phi
-	if r > 1e-20:
-		gradB_theta -= B_theta * (1/r + gradP_norm)
+	gradB_theta = lmbda1 * B_phi - (1 / max(r, 1e-4) + gradP_norm) * B_theta
 	return [gradB_phi, gradB_theta]
 
 def calcB(lmbda0, alpha, config):
@@ -72,21 +70,26 @@ def calcB(lmbda0, alpha, config):
 def lmbdaDot(B_phi, B_theta, V_phi, V_theta, V_phi_DC, P_ohm, U_mag, U_mag_dot, flux, a, mu0, eta0, R0):
 	I_phi = B_theta * flux / (a * mu0)
 	I_theta = B_phi * flux * R0 / (a**2 * mu0)
-	P_diss = P_ohm * flux**2 * eta0 * R0 / (a**4 * mu0**2)
+	P_diss = P_ohm * flux**2 * eta0 * R0 / (a**4 * mu0**2) # check eta0 and P_ohm
 	num = ((V_phi_DC + V_phi) * I_phi - V_theta * I_theta - P_diss) * 2 * mu0 * a**2 / R0
 	num += 2 * V_theta * flux * U_mag
 	den = flux**2 * U_mag_dot
 	return num / den
 
-def lfDot(t, x, B_phi, B_theta, V_phi, V_theta, V_phi_DC, P_ohm, U_mag, U_mag_dot, a, mu0, eta0, R0):
-	lmbda, flux = x
+def lfDot(t, x, time, spl_B_phi, spl_B_theta, V_phi_wave, V_theta_wave, V_phi_DC, spl_P_ohm, spl_U_mag, alpha, a, mu0, eta0, R0):
+	lmbda0, flux = x
+	B_phi, B_theta = spl_B_phi(lmbda0, alpha), spl_B_theta(lmbda0, alpha)
+	V_phi, V_theta = np.interp(t, time, V_phi_wave), np.interp(t, time, V_theta_wave)
+	P_ohm = spl_P_ohm(lmbda0, alpha)
+	U_mag = spl_U_mag(lmbda0, alpha)
+	U_mag_dot = spl_U_mag(lmbda0, alpha, dx=1)
 	lmbda_dot = lmbdaDot(B_phi, B_theta, V_phi, V_theta, V_phi_DC, P_ohm, U_mag, U_mag_dot, flux, a, mu0, eta0, R0)
 	flux_dot = -V_theta
 	return [lmbda_dot, flux_dot]
 
 def Te0(I_phi, a, density):
 	# return 2.8 * (2 * a)**0.83 * (I_phi * 1e-3)**0.67 * (I_phi * 1e14 / (np.pi * a**2 * density))**0.51
-	return max(2.8 * (2 * a)**0.83 * np.sqrt(I_phi / (density * np.pi * a**2 * 1e14)) * (I_phi * 1e-3)**0.67, 20)
+	return max(2.8 * (2 * a)**0.83 * np.sqrt(I_phi / (density * np.pi * a**2) * 1e14) * (I_phi * 1e-3)**0.67, 20)
 
 def Pohm(r, B, lmbda):
 	eta = 1 / (0.95 * (1 - r**8) + 0.05)**1.5
@@ -116,10 +119,11 @@ def preCalc(config):
 	for (i, lmbda0) in enumerate(list_lmbda0):
 		for (j, alpha) in enumerate(list_alpha):
 			r, B = calcB(lmbda0, alpha, config)
-			B_phi[i,j] = B[-1,0]
-			B_theta[i,j] = B[-1,1]
-			P_ohm[i,j] = Pohm(r, B, lmbda(r, alpha, lmbda0))
-			U_mag[i,j] = Umag(r, B)
+			flux = si.simps(r * B[:,0], r)
+			B_phi[i,j] = B[-1,0] / flux
+			B_theta[i,j] = B[-1,1] / flux
+			P_ohm[i,j] = Pohm(r, B, lmbda(r, alpha, lmbda0)) / flux**2
+			U_mag[i,j] = Umag(r, B) / flux**2
 
 	return list_lmbda0, list_alpha, B_phi, B_theta, P_ohm, U_mag
 
@@ -139,7 +143,7 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 	zeff = config["zeff"]
 	zohm = (0.4 + 0.6 * zeff) * zneo
 
-	alpha = 4.0 # FIXME
+	alpha = 4.0 # FIXME: using hardcoded fixed alpha for now, for comparison with IDL code
 
 	# Time discretization
 	t, num_t = time(config["time"])
@@ -153,15 +157,38 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 	flux0 = config_mode["flux_ref"] * config_mode["flux_multiplier"]
 	density = config_mode["density_ref"] * config_mode["density_multiplier"] * np.ones(num_t)
 
-	config_mode_phi = config_mode["toroidal"]
-	V_phi_wave = np.interp(t, config_mode_phi["time"], config_mode_phi["voltage"])
-	V_phi_DC = config_mode_phi["DC_voltage"]
+	config_phi = config_mode["toroidal"]
+	V_phi_wave = np.interp(t, config_phi["time"], config_phi["voltage"])
+	V_phi_DC = config_phi["DC_voltage"]
 
-	config_mode_theta = config_mode["poloidal"]
-	V_theta_wave = np.interp(t, config_mode_theta["time"], config_mode_theta["voltage"])
+	config_theta = config_mode["poloidal"]
+	V_theta_wave = np.interp(t, config_theta["time"], config_theta["voltage"])
 
-	config_mode_anom = config_mode["anomalous"]
-	zanom_wave = np.interp(t, config_mode_anom["time"], config_mode_anom["voltage"])
+	config_anom = config_mode["anomalous"]
+	zanom_wave = np.interp(t, config_anom["time"], config_anom["voltage"])
+
+	if "OPCD" in config_mode:
+		config_opcd = config_mode["OPCD"]
+		t_start = config_opcd["t_start"]
+		freq = config_opcd["freq"]
+		domain = t >= t_start & t <= t_start + config_opcd["cycles"] / freq
+		V_theta_wave -= config_opcd["max_voltage"] * np.sin(2 * np.pi * freq * t) * domain
+
+	if "OFCD" in config_mode:
+		config_ofcd = config_mode["OPCD"]
+		t_start = config_ofcd["t_start"]
+		freq = config_ofcd["freq"]
+		cycles = config_ofcd["cycles"]
+		phase = config_ofcd["phase"]
+		sin_wave = config_ofcd["max_voltage"] * np.sin(2 * np.pi * freq * t)
+		theta_domain = t >= t_start & t <= t_start + cycles / freq
+		V_theta_wave -= sin_wave * theta_domain
+		phi_domain = t >= t_start + phase / freq & t <= t_start + (phase + cycles) / freq
+		V_phi_wave -= sin_wave * phi_domain
+
+	if "buck" in config_mode:
+		config_buck = config_mode["buck"]
+		V_phi_wave += np.interp(t, config_buck["time"], config_buck["voltage"])
 
 	# Allocate arrays
 	flux = np.zeros(num_t)
@@ -172,8 +199,8 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 	# Initial conditions
 	I[0,0] = config["initial"]["I_phi"]
 	flux[0] = I[0,0] / 100.0 * flux0
-	# FIXME: reverse spline weird
-	# lmbda0[0] = sp.CubicSpline(grid_B_theta[:,2], list_lmbda0)(mu0 * a * I[0,0] / flux[0])
+	list_B_theta = np.squeeze(spl_B_theta(list_lmbda0, alpha))
+	lmbda0[0] = sp.CubicSpline(list_B_theta, list_lmbda0, bc_type="natural")(mu0 * a * I[0,0] / flux[0])
 	I[0,1] = spl_B_phi(lmbda0[0], alpha) * flux[0] * R0 / (a**2 * mu0)
 
 	# Time integration
@@ -181,17 +208,9 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 	solver.set_integrator("dopri5")
 	solver.set_initial_value([lmbda0[0], flux[0]], t[0])
 	for i in xrange(1, num_t):
-		eta0 = zanom_wave[i] * (1.6 * 7.75e-4 * zohm / Te0(I[i-1,0], density[i-1], a)**1.5)
-		V_phi, V_theta = V_phi_wave[i-1], V_theta_wave[i-1] # TODO: make time dependent
-		B_phi, B_theta = spl_B_phi(lmbda0[i-1], alpha), spl_B_theta(lmbda0[i-1], alpha)
-		U_mag = spl_U_mag(lmbda0[i-1], alpha)
-		U_mag_dot = spl_U_mag(lmbda0[i-1], alpha, dx=1)
-		P_ohm1 = spl_P_ohm(lmbda0[i-1], alpha)
-		solver.set_f_params(B_phi, B_theta, V_phi, V_theta, V_phi_DC, P_ohm1, U_mag, U_mag_dot, a, mu0, eta0, R0)
-		solver.integrate(t[i])
-		y = solver.y
-		lmbda0[i] = y[0]
-		flux[i] = y[1]
+		eta0 = zanom_wave[i-1] * (1.6 * 7.75e-4 * zohm / Te0(I[i-1,0], density[i-1], a)**1.5)
+		solver.set_f_params(t, spl_B_phi, spl_B_theta, V_phi_wave, V_theta_wave, V_phi_DC, spl_P_ohm, spl_U_mag, alpha, a, mu0, eta0, R0)
+		lmbda0[i], flux[i] = solver.integrate(t[i])
 		B_phi, B_theta = spl_B_phi(lmbda0[i], alpha), spl_B_theta(lmbda0[i], alpha)
 		I[i,0] = B_theta * flux[i] / (a * mu0)
 		I[i,1] = B_phi * flux[i] * R0 / (a**2 * mu0)
@@ -310,7 +329,15 @@ def plotI(t, I):
 	plt.grid()
 
 def hashname(config):
-	return sha1(json.dumps(config, sort_keys=True)).hexdigest()[0:8] + ".h5"
+	# File hash depends only on config values used for the precomputation
+	subconfig = {
+		"lambda_0": config["lambda_0"],
+		"alpha": config["alpha"],
+		"rho": config["rho"],
+		"beta_theta": config["beta_theta"],
+		"pressure": config["pressure"],
+	}
+	return "z" + sha1(json.dumps(subconfig, sort_keys=True)).hexdigest()[0:7] + ".h5"
 
 def run():
 	# Parse config file

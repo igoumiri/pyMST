@@ -3,7 +3,7 @@
 # October 16, 2016
 
 # beta_0 = beta_theta * B_theta(r=1)^2 / (2 ∫ r⋅P(r) dr)
-beta_theta = 0.7
+beta_theta = 0.07
 
 # Mock parameters
 mu0 = 0.000001256637061 # pi * 4e-7
@@ -32,18 +32,19 @@ mode = "STD_400KA"
 	# ndiv = 10_000
 
 [alpha]
-	min = 3.5
-	max = 4.5
+	min = 3.99
+	max = 4.01
 	ndiv = 4
 
 [lambda_0]
 	min = 0.0
 	max = 4.0
-	# ndiv = 400 # => step = 0.01
-	ndiv = 40 # => step = 0.1
+	ndiv = 400 # => step = 0.01
+	# ndiv = 40 # => step = 0.1
 
 [initial]
 	I_phi = 100.0
+
 
 [STD_400KA]
 	flux_ref = 0.0306 # reference toroidal flux, in Wb
@@ -60,3 +61,213 @@ mode = "STD_400KA"
 [STD_400KA.anomalous] # anom
 	time = [0.0, 0.012, 1.0]
 	voltage = [3.0, 1.0, 1.0]
+
+
+[BTPPS]
+	flux_ref = 0.0306 # reference toroidal flux, in Wb
+	flux_multiplier = 1.0
+	density_ref = 1.0e19 # reference plasma density
+	density_multiplier = 1.0
+[BTPPS.toroidal] # phi
+	time = [0.0, 0.010, 0.017, 0.023, 0.032, 0.037, 0.085, 1.0]
+	# voltage = [180.0, 37.0, 27.0, 9.0, 25.0, -4.0, 0.0, 0.0]
+	voltage = [90.0, 18.5, 13.5, 4.5, 12.5, -2.0, 0.0, 0.0]
+	# voltage = [135.0, 27.75, 20.25, 6.75, 18.75, -3.0, 0.0, 0.0]
+	DC_voltage = 0.0
+[BTPPS.poloidal] # theta
+	time = [0.0, 0.012, 0.032, 0.04, 0.06, 0.07, 0.077, 0.08, 1.0]
+	voltage = [-7.0, -0.5, -0.3, 1.2, 1.7, 2.0, 5.5, 0.0, 0.0]
+[BTPPS.anomalous] # anom
+	time = [0.0, 0.012, 1.0]
+	voltage = [3.0, 1.0, 1.0]
+
+
+[MM_550KA]
+	flux_ref = 0.0306 # reference toroidal flux, in Wb
+	flux_multiplier = 3.47
+	density_ref = 1.0e19 # reference plasma density
+	density_multiplier = 1.0
+[MM_550KA.toroidal] # phi
+	time = [0.0, 0.010, 0.017, 0.023, 0.032, 0.037, 0.085, 1.0]
+	voltage = [148.0, 37.0, 11.7, 11.7, 11.7, -5.0, 0.0, 0.0]
+	DC_voltage = 0.0
+[MM_550KA.poloidal] # theta
+	time = [0.0, 0.012, 0.03, 0.04, 0.065, 0.085, 0.09, 1.0]
+	voltage = [0.0, 0.0, 0.0, 1.55, 1.55, 2.2, 0.0, 0.0]
+[MM_550KA.anomalous] # anom
+	time = [0.0, 0.012, 1.0]
+	voltage = [3.0, 1.0, 1.0]
+
+
+[MM_MAX_IP]
+	flux_ref = 0.0306 # reference toroidal flux, in Wb
+	flux_multiplier = 6.5
+	density_ref = 1.0e19 # reference plasma density
+	density_multiplier = 3.0
+[MM_MAX_IP.toroidal] # phi
+	time = [0.0, 0.010, 0.017, 0.023, 0.032, 0.037, 0.1, 1.0]
+	voltage = [246.5, 43.0, 11.5, 11.5, 11.5, -20.0, 0.0, 0.0]
+	DC_voltage = 0.0
+[MM_MAX_IP.poloidal] # theta
+	time = [0.0, 0.012, 0.032, 0.04, 0.065, 0.085, 0.09, 1.0]
+	voltage = [0.0, 0.0, 0.0, 2.9, 2.9, 3.19, 0.0, 0.0]
+[MM_MAX_IP.anomalous] # anom
+	time = [0.0, 0.012, 1.0]
+	voltage = [3.0, 1.0, 1.0]
+
+
+[MOCK_400KA]
+	flux_ref = 0.0306 # reference toroidal flux, in Wb
+	flux_multiplier = 1.15
+	density_ref = 1.0e19 # reference plasma density
+	density_multiplier = 1.0
+[MOCK_400KA.toroidal] # phi
+	time = [0.0, 0.010, 0.017, 0.023, 0.05, 0.055, 0.085, 1.0]
+	voltage = [148.0, 40.0, 16.3, 16.3, 16.3, -5.0, -5.0, 0.0]
+	DC_voltage = 0.0
+[MOCK_400KA.poloidal] # theta
+	time = [0.0, 0.01, 0.05, 0.055, 0.06, 0.07, 0.08, 0.085, 1.0]
+	voltage = [-7.5, 0.0, 0.0, 1.6, 1.6, 1.6, 1.6, 0.0, 0.0]
+[MOCK_400KA.anomalous] # anom
+	time = [0.0, 0.012, 1.0]
+	voltage = [3.0, 1.0, 1.0]
+
+
+[OPCD_400KA]
+	flux_ref = 0.0306 # reference toroidal flux, in Wb
+	flux_multiplier = 1.15
+	density_ref = 1.0e19 # reference plasma density
+	density_multiplier = 1.0
+[OPCD_400KA.toroidal] # phi
+	time = [0.0, 0.010, 0.017, 0.023, 0.05, 0.055, 0.085, 1.0]
+	voltage = [148.0, 40.0, 16.3, 16.3, 16.3, -5.0, -5.0, 0.0]
+	DC_voltage = 0.0
+[OPCD_400KA.poloidal] # theta
+	time = [0.0, 0.01, 0.05, 0.055, 0.06, 0.07, 0.08, 0.085, 1.0]
+	voltage = [-7.5, 0.0, 0.0, 1.6, 1.6, 1.6, 1.6, 0.0, 0.0]
+[OPCD_400KA.anomalous] # anom
+	time = [0.0, 0.012, 1.0]
+	voltage = [3.0, 1.0, 1.0]
+[OPCD_400KA.OPCD]
+	t_start = 0.015
+	cycles = 12.0
+	freq = 250.0
+	max_voltage = 25.0
+
+
+[OFCD_400KA]
+	flux_ref = 0.0306 # reference toroidal flux, in Wb
+	flux_multiplier = 1.15
+	density_ref = 1.0e19 # reference plasma density
+	density_multiplier = 1.0
+[OFCD_400KA.toroidal] # phi
+	time = [0.0, 0.010, 0.017, 0.023, 0.05, 0.055, 0.085, 1.0]
+	voltage = [148.0, 40.0, 16.3, 16.3, 16.3, -5.0, -5.0, 0.0]
+	DC_voltage = 0.0
+[OFCD_400KA.poloidal] # theta
+	time = [0.0, 0.01, 0.05, 0.055, 0.06, 0.07, 0.08, 0.085, 1.0]
+	voltage = [-7.5, 0.0, 0.0, 1.6, 1.6, 1.6, 1.6, 0.0, 0.0]
+[OFCD_400KA.anomalous] # anom
+	time = [0.0, 0.012, 1.0]
+	voltage = [3.0, 1.0, 1.0]
+[OFCD_400KA.OFCD]
+	t_start = 0.015
+	cycles = 12.0
+	freq = 250.0
+	phase = 0.25
+	max_voltage = 20.0
+
+
+[OFCD_400_CC]
+	flux_ref = 0.0306 # reference toroidal flux, in Wb
+	flux_multiplier = 1.15
+	density_ref = 1.0e19 # reference plasma density
+	density_multiplier = 1.0
+[OFCD_400_CC.toroidal] # phi
+	time = [0.0, 0.010, 0.017, 0.023, 0.05, 0.055, 0.085, 1.0]
+	voltage = [148.0, 40.0, 16.3, 16.3, 16.3, -5.0, -5.0, 0.0]
+	DC_voltage = 0.0
+[OFCD_400_CC.poloidal] # theta
+	time = [0.0, 0.01, 0.05, 0.055, 0.06, 0.07, 0.08, 0.085, 1.0]
+	voltage = [-7.5, 0.0, 0.0, 1.6, 1.6, 1.6, 1.6, 0.0, 0.0]
+[OFCD_400_CC.anomalous] # anom
+	time = [0.0, 0.012, 1.0]
+	voltage = [3.0, 1.0, 1.0]
+[OFCD_400_CC.OFCD]
+	t_start = 0.015
+	cycles = 12.0
+	freq = 250.0
+	phase = 0.25
+	max_voltage = 20.0
+[OFCD_400_CC.buck]
+	time = [0.0, 0.015, 0.02, 0.06, 0.065, 1.0]
+	voltage = [0.0, 0.0, -8.0, -8.0, 0.0, 0.0]
+
+
+[PPCD_550KA]
+	flux_ref = 0.0306 # reference toroidal flux, in Wb
+	flux_multiplier = 3.47
+	density_ref = 1.0e19 # reference plasma density
+	density_multiplier = 1.0
+[PPCD_550KA.toroidal] # phi
+	time = [0.0, 0.010, 0.017, 0.023, 0.032, 0.037, 0.085, 1.0]
+	voltage = [148.0, 37.0, 11.7, 11.7, 11.7, -5.0, 0.0, 0.0]
+	DC_voltage = 0.0
+[PPCD_550KA.poloidal] # theta
+	time = [0.0, 0.012, 0.03, 0.04, 0.065, 0.085, 0.09, 1.0]
+	voltage = [0.0, 0.0, 0.0, 1.55, 1.55, 2.2, 0.0, 0.0]
+[PPCD_550KA.poloidal.add] # theta
+	time = [0.0, 0.03, 0.031, 0.04, 0.065, 1.0]
+	voltage = [0.0, 0.0, -2.0, -2.0, 0.0, 0.0]
+[PPCD_550KA.PPCD.poloidal] # theta
+	time = [0.0, 0.015, 0.016, 0.03, 0.031, 1.0]
+	voltage = [0.0, 0.0, 3.0, 3.0, 0.0, 0.0]
+[PPCD_550KA.PPCD.Te]
+	time = [0.0, 0.015, 0.016, 0.02, 0.023, 0.03, 0.031, 1.0]
+	voltage = [0.0, 0.0, 0.0, 2.5333333333, 2.8, 3.0, 0.0, 0.0]
+[PPCD_550KA.anomalous] # anom
+	time = [0.0, 0.012, 1.0]
+	voltage = [3.0, 1.0, 1.0]
+
+
+[OFCD_250KA]
+	flux_ref = 0.0306 # reference toroidal flux, in Wb
+	flux_multiplier = 0.732
+	density_ref = 1.0e19 # reference plasma density
+	density_multiplier = 1.0
+	flux_0 = 0.0373 # FIXME: handle this
+[OFCD_250KA.toroidal] # phi
+	time = [0.0, 0.010, 0.017, 0.023, 0.75, 0.755, 0.785, 1.0]
+	voltage = [130.0, 35.0, 16.9, 16.9, 16.9, -5.0, -5.0, 0.0]
+	DC_voltage = 0.0
+[OFCD_250KA.poloidal] # theta
+	time = [0.0, 0.01, 0.05, 0.755, 0.76, 0.77, 0.78, 0.785, 1.0]
+	voltage = [-4.8, 0.0, 0.0, 0.0, 0.9, 1.02, 1.02, 0.0, 0.0]
+[OFCD_250KA.anomalous] # anom
+	time = [0.0, 0.012, 1.0]
+	voltage = [3.0, 1.0, 1.0]
+[OFCD_250KA.OFCD]
+	t_start = 0.015
+	cycles = 180.0
+	freq = 280.0
+	phase = 0.1
+	max_voltage = 11.0
+	offset = 0.0
+
+
+[RAMP_550KA]
+	flux_ref = 0.0306 # reference toroidal flux, in Wb
+	flux_multiplier = 0.2
+	density_ref = 1.0e19 # reference plasma density
+	density_multiplier = 1.0
+[RAMP_550KA.toroidal] # phi
+	time = [0.0, 0.010, 0.017, 0.023, 0.032, 0.037, 0.085, 1.0]
+	voltage = [148.0, 37.0, 11.7, 11.7, 11.7, -5.0, 0.0, 0.0]
+	DC_voltage = 0.0
+[RAMP_550KA.poloidal] # theta
+	time = [0.0, 0.012, 0.03, 0.04, 0.065, 0.085, 0.09, 1.0]
+	voltage = [-6.0, 0.3, 0.0, 1.55, 1.55, 2.2, 0.0, 0.0]
+[RAMP_550KA.anomalous] # anom
+	time = [0.0, 0.012, 1.0]
+	voltage = [3.0, 1.0, 1.0]
+
