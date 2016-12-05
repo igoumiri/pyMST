@@ -190,6 +190,10 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 		config_buck = config_mode["buck"]
 		V_phi_wave += np.interp(t, config_buck["time"], config_buck["voltage"])
 
+	if "Te" in config_mode:
+		config_Te = config_mode["Te"]
+		PPCD_Te_mult += np.interp(t, config_Te["time"], config_Te["voltage"])
+
 	# Allocate arrays
 	flux = np.zeros(num_t)
 	lmbda0 = np.zeros(num_t)
@@ -208,7 +212,9 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 	solver.set_integrator("dopri5")
 	solver.set_initial_value([lmbda0[0], flux[0]], t[0])
 	for i in xrange(1, num_t):
-		eta0 = zanom_wave[i-1] * (1.6 * 7.75e-4 * zohm / Te0(I[i-1,0], density[i-1], a)**1.5)
+		eta0 = zanom_wave[i-1] * 1.6 * 7.75e-4 * zohm / Te0(I[i-1,0], density[i-1], a)**1.5
+		if mode is "PPCD_550KA":
+			eta0 /= PPCD_Te_mult[i-1]**1.5
 		solver.set_f_params(t, spl_B_phi, spl_B_theta, V_phi_wave, V_theta_wave, V_phi_DC, spl_P_ohm, spl_U_mag, alpha, a, mu0, eta0, R0)
 		lmbda0[i], flux[i] = solver.integrate(t[i])
 		B_phi, B_theta = spl_B_phi(lmbda0[i], alpha), spl_B_theta(lmbda0[i], alpha)
