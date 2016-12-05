@@ -87,7 +87,7 @@ def lfDot(t, x, time, spl_B_phi, spl_B_theta, V_phi_wave, V_theta_wave, V_phi_DC
 	flux_dot = -V_theta
 	return [lmbda_dot, flux_dot]
 
-def Te0(I_phi, a, density):
+def Te0(I_phi, density, a):
 	# return 2.8 * (2 * a)**0.83 * (I_phi * 1e-3)**0.67 * (I_phi * 1e14 / (np.pi * a**2 * density))**0.51
 	return max(2.8 * (2 * a)**0.83 * np.sqrt(I_phi / (density * np.pi * a**2) * 1e14) * (I_phi * 1e-3)**0.67, 20)
 
