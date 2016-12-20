@@ -127,6 +127,14 @@ def preCalc(config):
 
 	return list_lmbda0, list_alpha, B_phi, B_theta, P_ohm, U_mag
 
+def loadVec(config):
+	if "file" in config:
+		column = None
+		if "column" in config:
+			column = config["column"] - 1
+		return np.loadtxt(config["file"], usecols=(column,))
+	return np.array(config)
+
 def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_mag, config):
 	# Make splines for magnetic fields, ohmic power and magnetic energy
 	spl_B_phi = sp.RectBivariateSpline(list_lmbda0, list_alpha, grid_B_phi)
@@ -157,12 +165,16 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 	flux0 = config_mode["flux_ref"] * config_mode["flux_multiplier"]
 	density = config_mode["density_ref"] * config_mode["density_multiplier"] * np.ones(num_t)
 
+	if "density" in config_mode:
+		config_density = config_mode["density"]
+		density = np.interp(t, loadVec(config_density["time"]), loadVec(config_density["value"]))
+
 	config_phi = config_mode["toroidal"]
-	V_phi_wave = np.interp(t, config_phi["time"], config_phi["voltage"])
+	V_phi_wave = np.interp(t, loadVec(config_phi["time"]), loadVec(config_phi["voltage"]))
 	V_phi_DC = config_phi["DC_voltage"]
 
 	config_theta = config_mode["poloidal"]
-	V_theta_wave = np.interp(t, config_theta["time"], config_theta["voltage"])
+	V_theta_wave = np.interp(t, loadVec(config_theta["time"]), loadVec(config_theta["voltage"]))
 
 	config_anom = config_mode["anomalous"]
 	zanom_wave = np.interp(t, config_anom["time"], config_anom["voltage"])
@@ -377,8 +389,8 @@ def run():
 	t, I, flux, P_ohm = calc(lmbda0, alpha, B_phi, B_theta, P_ohm, U_mag, config)
 
 	# Plot results
-	V_phi = np.interp(t, config[config["mode"]]["toroidal"]["time"], config[config["mode"]]["toroidal"]["voltage"])
-	V_theta = np.interp(t, config[config["mode"]]["poloidal"]["time"], config[config["mode"]]["poloidal"]["voltage"])
+	V_phi = np.interp(t, loadVec(config[config["mode"]]["toroidal"]["time"]), loadVec(config[config["mode"]]["toroidal"]["voltage"]))
+	V_theta = np.interp(t, loadVec(config[config["mode"]]["poloidal"]["time"]), loadVec(config[config["mode"]]["poloidal"]["voltage"]))
 	BP_core_flux = si.cumtrapz(V_phi, t, initial=0) - (0.72 + 0.13)
 	mu0 = config["mu0"]
 	aspect_ratio = config["aspect_ratio"]
