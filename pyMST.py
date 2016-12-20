@@ -211,6 +211,7 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 	lmbda0 = np.zeros(num_t)
 	I = np.zeros((num_t, 2)) # Current
 	P_ohm = np.zeros(num_t)
+	eta0 = np.zeros(num_t)
 
 	# Initial conditions
 	I[0,0] = config["initial"]["I_phi"]
@@ -224,15 +225,15 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 	solver.set_integrator("dopri5")
 	solver.set_initial_value([lmbda0[0], flux[0]], t[0])
 	for i in xrange(1, num_t):
-		eta0 = zanom_wave[i-1] * 1.6 * 7.75e-4 * zohm / Te0(I[i-1,0], density[i-1], a)**1.5
+		eta0[i] = zanom_wave[i-1] * 1.6 * 7.75e-4 * zohm / Te0(I[i-1,0], density[i-1], a)**1.5
 		if mode is "PPCD_550KA":
-			eta0 /= PPCD_Te_mult[i-1]**1.5
-		solver.set_f_params(t, spl_B_phi, spl_B_theta, V_phi_wave, V_theta_wave, V_phi_DC, spl_P_ohm, spl_U_mag, alpha, a, mu0, eta0, R0)
+			eta0[i] /= PPCD_Te_mult[i-1]**1.5
+		solver.set_f_params(t, spl_B_phi, spl_B_theta, V_phi_wave, V_theta_wave, V_phi_DC, spl_P_ohm, spl_U_mag, alpha, a, mu0, eta0[i], R0)
 		lmbda0[i], flux[i] = solver.integrate(t[i])
 		B_phi, B_theta = spl_B_phi(lmbda0[i], alpha), spl_B_theta(lmbda0[i], alpha)
 		I[i,0] = B_theta * flux[i] / (a * mu0)
 		I[i,1] = B_phi * flux[i] * R0 / (a**2 * mu0)
-		P_ohm[i] = spl_P_ohm(lmbda0[i], alpha) * flux[i]**2 * eta0 * R0 / (a**4 * mu0**2)
+		P_ohm[i] = spl_P_ohm(lmbda0[i], alpha) * flux[i]**2 * eta0[i] * R0 / (a**4 * mu0**2)
 		if not solver.successful():
 			print("Warning: Integration failed at t={0}".format(t[i]))
 			break
@@ -241,7 +242,7 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 			# t[i:] = np.nan # strip plots
 			break
 
-	return t, I, flux, P_ohm
+	return t, I, flux, P_ohm, eta0
 
 def plotVphiAndBPCoreFlux(t, V_phi, BP_core_flux):
 	plt.plot(t, V_phi)
@@ -332,6 +333,13 @@ def plotEnergyTheta(t, ener_theta, abs_ener_theta):
 	plt.legend([r"$\int V_\theta I_\theta$", r"$\int |V_\theta I_\theta|$"])
 	plt.grid()
 
+def plotEta0(t, eta0):
+	plt.plot(t, eta0)
+	plt.xlabel("Time (s)")
+	plt.ylabel(r"$\eta_0$ ($\Omega$)")
+	plt.title(r"$\eta_0$")
+	plt.grid()
+
 def plotB(r, B):
 	plt.plot(r, B)
 	plt.xlabel(r"$r$")
@@ -386,7 +394,7 @@ def run():
 			file.create_dataset("U_mag", data=U_mag)
 
 	# Run program
-	t, I, flux, P_ohm = calc(lmbda0, alpha, B_phi, B_theta, P_ohm, U_mag, config)
+	t, I, flux, P_ohm, eta0 = calc(lmbda0, alpha, B_phi, B_theta, P_ohm, U_mag, config)
 
 	# Plot results
 	V_phi = np.interp(t, loadVec(config[config["mode"]]["toroidal"]["time"]), loadVec(config[config["mode"]]["toroidal"]["voltage"]))
@@ -448,6 +456,10 @@ def run():
 
 	plt.subplot(4, 3, 11)
 	plotEnergyTheta(t, ener_theta, abs_ener_theta)
+	plt.xlim(xmax=tf)
+
+	plt.subplot(4, 3, 12)
+	plotEta0(t, eta0)
 	plt.xlim(xmax=tf)
 
 	plt.show()
