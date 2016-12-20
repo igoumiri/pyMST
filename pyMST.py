@@ -242,7 +242,7 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 			# t[i:] = np.nan # strip plots
 			break
 
-	return t, I, flux, P_ohm, eta0
+	return t, I, flux, P_ohm, eta0, V_phi_wave, V_theta_wave
 
 def plotVphiAndBPCoreFlux(t, V_phi, BP_core_flux):
 	plt.plot(t, V_phi)
@@ -394,11 +394,9 @@ def run():
 			file.create_dataset("U_mag", data=U_mag)
 
 	# Run program
-	t, I, flux, P_ohm, eta0 = calc(lmbda0, alpha, B_phi, B_theta, P_ohm, U_mag, config)
+	t, I, flux, P_ohm, eta0, V_phi, V_theta = calc(lmbda0, alpha, B_phi, B_theta, P_ohm, U_mag, config)
 
 	# Plot results
-	V_phi = np.interp(t, loadVec(config[config["mode"]]["toroidal"]["time"]), loadVec(config[config["mode"]]["toroidal"]["voltage"]))
-	V_theta = np.interp(t, loadVec(config[config["mode"]]["poloidal"]["time"]), loadVec(config[config["mode"]]["poloidal"]["voltage"]))
 	BP_core_flux = si.cumtrapz(V_phi, t, initial=0) - (0.72 + 0.13)
 	mu0 = config["mu0"]
 	aspect_ratio = config["aspect_ratio"]
