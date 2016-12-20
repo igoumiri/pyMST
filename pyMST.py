@@ -194,9 +194,10 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 		phase = config_ofcd["phase"]
 		sin_wave = config_ofcd["max_voltage"] * np.sin(2 * np.pi * freq * t)
 		theta_domain = (t >= t_start) & (t <= t_start + cycles / freq)
-		V_theta_wave -= sin_wave * theta_domain
-		phi_domain = (t >= t_start + phase / freq) & (t <= t_start + (phase + cycles) / freq)
-		V_phi_wave -= sin_wave * phi_domain
+		V_theta_wave[theta_domain] -= sin_wave[theta_domain]
+		offset = int(phase / (freq * (t[1] - t[0])))
+		phi_domain = np.roll(theta_domain, -offset)
+		V_phi_wave[phi_domain] = V_phi_wave[theta_domain] - 10 * sin_wave[theta_domain]
 
 	if "buck" in config_mode:
 		config_buck = config_mode["buck"]
