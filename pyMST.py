@@ -286,7 +286,10 @@ def plotItheta(t, I_theta):
 	plt.grid()
 
 def plotPohmOverIphi(t, P_ohm, I_phi):
-	plt.plot(t, P_ohm / np.max(I_phi, 1e-20))
+	nz = I_phi != 0
+	P_ohm_over_I_phi = t * np.nan
+	P_ohm_over_I_phi[nz] = P_ohm[nz] / I_phi[nz]
+	plt.plot(t, P_ohm_over_I_phi)
 	plt.xlabel("Time (s)")
 	plt.ylabel("Voltage (V)")
 	plt.title(r"$P_\mathrm{ohm}/I_\phi$")
@@ -309,7 +312,6 @@ def plotVthetaTimesItheta(t, V_theta, I_theta):
 def plotThetaAndF(t, theta, f):
 	plt.plot(t, theta)
 	plt.plot(t, f)
-	plt.plot(t, -f) # Is that what F is?
 	plt.xlabel("Time (s)")
 	plt.ylabel(r"$\Theta$ & $F$")
 	plt.title(r"$\Theta$ & $F$")
@@ -403,8 +405,11 @@ def run():
 	aspect_ratio = config["aspect_ratio"]
 	a = config["a"]
 	R0 = aspect_ratio * a
-	f = mu0 * a**2 * I[:,1] / (2 * R0 * np.max(flux, 1e-20))
-	theta = mu0 * a * I[:,0] / (2 * np.max(flux, 1e-20))
+	f = t * np.nan
+	theta = t * np.nan
+	nz = flux != 0
+	f[nz] = mu0 * a**2 * I[nz,1] / (2 * R0 * flux[nz])
+	theta[nz] = mu0 * a * I[nz,0] / (2 * flux[nz])
 	ener_phi = 1e-3 * si.cumtrapz(V_phi * I[:,0], t, initial=0)
 	abs_ener_phi = 1e-3 * si.cumtrapz(np.abs(V_phi * I[:,0]), t, initial=0)
 	ener_theta = 1e-3 * si.cumtrapz(V_theta * I[:,1], t, initial=0)
