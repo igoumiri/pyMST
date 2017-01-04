@@ -13,7 +13,9 @@ zneo = 1.5 # trapped electron enhancement
 zeff = 2.6 # used to match an MST data set
 
 # Simulation mode
-mode = "STD_400KA"
+mode = "STD_400KA_realdata"
+# mode = "imene"
+# mode = "OFCD_400_CC"
 
 [pressure]
 	# p(r) = p(0) * (1 - r^c1)^c2
@@ -26,7 +28,7 @@ mode = "STD_400KA"
 	ndiv = 50 # => step = 0.02
 
 [time]
-	t0 = 0.0
+	t0 = 6.700009107589721680e-4
 	tf = 0.1
 	dt = 1.0e-5
 	# ndiv = 10_000
@@ -44,6 +46,36 @@ mode = "STD_400KA"
 
 [initial]
 	I_phi = 100.0
+
+[STD_400KA_realdata]
+	shot = 1100903060
+	time = { file = "realdata.dat", column = 1 }
+	P_ohm_over_I_phi = { file = "realdata.dat", column = 8 }
+	theta = { file = "realdata.dat", column = 9 }
+	f = { file = "realdata.dat", column = 10 }
+[STD_400KA_realdata.alpha]
+	time = { file = "realdata.dat", column = 1 }
+	value = { file = "realdata.dat", column = 2 }
+[STD_400KA_realdata.flux]
+	ref = 0.0306 # reference toroidal flux, in Wb
+	multiplier = 0.880962371631
+	time = { file = "realdata.dat", column = 1 }
+	value = { file = "realdata.dat", column = 5 }
+[STD_400KA_realdata.density]
+	time = { file = "density.dat", column = 1 }
+	value = { file = "density.dat", column = 2 }
+[STD_400KA_realdata.toroidal] # phi
+	time = { file = "realdata.dat", column = 1 }
+	current = { file = "realdata.dat", column = 7 }
+	voltage = { file = "realdata.dat", column = 3 }
+	DC_voltage = 0.0
+[STD_400KA_realdata.poloidal] # theta
+	time = { file = "realdata.dat", column = 1 }
+	current = { file = "realdata.dat", column = 6 }
+	voltage = { file = "realdata.dat", column = 4 }
+[STD_400KA_realdata.anomalous] # anom
+	time = [0.0, 0.012, 1.0]
+	voltage = [3.0, 1.0, 1.0]
 
 
 [STD_400KA]

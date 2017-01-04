@@ -160,14 +160,19 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 	mode = config["mode"]
 	if mode not in config:
 		raise ValueError("parameters for mode '%s' missing from config file" % mode)
-
 	config_mode = config[mode]
-	flux0 = config_mode["flux_ref"] * config_mode["flux_multiplier"]
-	density = config_mode["density_ref"] * config_mode["density_multiplier"] * np.ones(num_t)
+
+	if "flux" in config_mode:
+		config_flux = config_mode["flux"]
+		flux0 = config_flux["ref"] * config_flux["multiplier"]
+	else:
+		flux0 = config_mode["flux_ref"] * config_mode["flux_multiplier"]
 
 	if "density" in config_mode:
 		config_density = config_mode["density"]
 		density = np.interp(t, loadVec(config_density["time"]), loadVec(config_density["value"]))
+	else:
+		density = config_mode["density_ref"] * config_mode["density_multiplier"] * np.ones(num_t)
 
 	config_phi = config_mode["toroidal"]
 	V_phi_wave = np.interp(t, loadVec(config_phi["time"]), loadVec(config_phi["voltage"]))
@@ -216,7 +221,7 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 
 	# Initial conditions
 	I[0,0] = config["initial"]["I_phi"]
-	flux[0] = I[0,0] / 100.0 * flux0
+	flux[0] = flux0 # I[0,0] / 100.0 * flux0
 	list_B_theta = np.squeeze(spl_B_theta(list_lmbda0, alpha))
 	lmbda0[0] = sp.CubicSpline(list_B_theta, list_lmbda0, bc_type="natural")(mu0 * a * I[0,0] / flux[0])
 	I[0,1] = spl_B_phi(lmbda0[0], alpha) * flux[0] * R0 / (a**2 * mu0)
@@ -245,51 +250,64 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 
 	return t, I, flux, P_ohm, eta0, V_phi_wave, V_theta_wave
 
-def plotVphiAndBPCoreFlux(t, V_phi, BP_core_flux):
+def plotVphiAndBPCoreFlux(t, V_phi, BP_core_flux, V_phi_shot=None):
+	if V_phi_shot is not None:
+		plt.plot(t, V_phi_shot, color="red")
 	plt.plot(t, V_phi)
 	plt.plot(t, 100 * BP_core_flux)
 	plt.axhline(y=100*1.9/2, linestyle="dashed")
 	plt.xlabel("Time (s)")
 	plt.ylabel("Voltage (V)")
 	plt.title(r"$V_\phi$ & BP core flux ($\times 100$)")
-	plt.legend([r"$V_\phi$", r"BP core flux ($\times 100$)"])
+	#plt.legend([r"$V_\phi$", r"BP core flux ($\times 100$)"])
 	plt.grid()
 
-def plotVtheta(t, V_theta):
+def plotVtheta(t, V_theta, V_theta_shot=None):
+	if V_theta_shot is not None:
+		plt.plot(t, V_theta_shot, color="red")
 	plt.plot(t, V_theta)
 	plt.xlabel("Time (s)")
 	plt.ylabel("Voltage (V)")
 	plt.title(r"$V_\theta$")
 	plt.grid()
 
-def plotFlux(t, flux):
+def plotFlux(t, flux, flux_shot=None):
+	if flux_shot is not None:
+		plt.plot(t, flux_shot, color="red")
 	plt.plot(t, flux)
 	plt.xlabel("Time (s)")
 	plt.ylabel("Flux (Wb)")
 	plt.title("BT Flux")
 	plt.grid()
 
-def plotIphi(t, I_phi, BP_core_flux):
+def plotIphi(t, I_phi, BP_core_flux, I_phi_shot=None):
+	if I_phi_shot is not None:
+		plt.plot(t, I_phi_shot, color="red")
 	plt.plot(t, 1e-3 * I_phi)
 	plt.plot(t, np.exp(7 * BP_core_flux / 0.58) * 0.67e-3)
 	plt.xlabel("Time (s)")
 	plt.ylabel("Current (kA)")
 	plt.title(r"$I_\phi$ & $I_\mathrm{mag}$")
-	plt.legend([r"$I_\phi$", r"$I_\mathrm{mag}$"])
+	#plt.legend([r"$I_\phi$", r"$I_\mathrm{mag}$"])
 	plt.grid()
 
-def plotItheta(t, I_theta):
+def plotItheta(t, I_theta, I_theta_shot=None):
+	if I_theta_shot is not None:
+		plt.plot(t, I_theta_shot, color="red")
 	plt.plot(t, 1e-6 * I_theta)
 	plt.xlabel("Time (s)")
 	plt.ylabel("Current (MA)")
 	plt.title(r"$I_\theta$")
 	plt.grid()
 
-def plotPohmOverIphi(t, P_ohm, I_phi):
+def plotPohmOverIphi(t, P_ohm, I_phi, P_ohm_over_I_phi_shot=None):
+	if P_ohm_over_I_phi_shot is not None:
+		plt.plot(t, P_ohm_over_I_phi_shot, color="red")
 	nz = I_phi != 0
 	P_ohm_over_I_phi = t * np.nan
 	P_ohm_over_I_phi[nz] = P_ohm[nz] / I_phi[nz]
 	plt.plot(t, P_ohm_over_I_phi)
+	plt.ylim([-20,120])
 	plt.xlabel("Time (s)")
 	plt.ylabel("Voltage (V)")
 	plt.title(r"$P_\mathrm{ohm}/I_\phi$")
@@ -309,13 +327,17 @@ def plotVthetaTimesItheta(t, V_theta, I_theta):
 	plt.title(r"$V_\theta \cdot I_\theta$")
 	plt.grid()
 
-def plotThetaAndF(t, theta, f):
-	plt.plot(t, theta)
-	plt.plot(t, f)
+def plotThetaAndF(t, theta, f, theta_shot=None, f_shot=None):
+	if theta_shot is not None and f_shot is not None:
+		plt.plot(t, theta_shot, color="red")
+		plt.plot(t, f_shot, color="red")
+	plt.plot(t, theta, label=r"$\Theta$")
+	plt.plot(t, f, label=r"$F$")
+	plt.ylim([-300,200])
 	plt.xlabel("Time (s)")
 	plt.ylabel(r"$\Theta$ & $F$")
 	plt.title(r"$\Theta$ & $F$")
-	plt.legend([r"$\Theta$", r"$F$"])
+	# plt.legend()
 	plt.grid()
 
 def plotEnergyPhi(t, ener_phi, abs_ener_phi):
@@ -324,7 +346,7 @@ def plotEnergyPhi(t, ener_phi, abs_ener_phi):
 	plt.xlabel("Time (s)")
 	plt.ylabel("Energy (kJ)")
 	plt.title(r"$\int V_\phi I_\phi$ & $\int |V_\phi I_\phi|$")
-	plt.legend([r"$\int V_\phi I_\phi$", r"$\int |V_\phi I_\phi|$"])
+	# plt.legend([r"$\int V_\phi I_\phi$", r"$\int |V_\phi I_\phi|$"])
 	plt.grid()
 
 def plotEnergyTheta(t, ener_theta, abs_ener_theta):
@@ -333,7 +355,7 @@ def plotEnergyTheta(t, ener_theta, abs_ener_theta):
 	plt.xlabel("Time (s)")
 	plt.ylabel("Energy (kJ)")
 	plt.title(r"$\int V_\theta I_\theta$ & $\int |V_\theta I_\theta|$")
-	plt.legend([r"$\int V_\theta I_\theta$", r"$\int |V_\theta I_\theta|$"])
+	# plt.legend([r"$\int V_\theta I_\theta$", r"$\int |V_\theta I_\theta|$"])
 	plt.grid()
 
 def plotEta0(t, eta0):
@@ -376,6 +398,18 @@ def run():
 	with open(sys.argv[1]) as config_file:
 		config = toml.loads(config_file.read())
 
+	mode = config["mode"]
+	if mode not in config:
+		raise ValueError("parameters for mode '%s' missing from config file" % mode)
+	config_mode = config[mode]
+
+	# Generate shot data
+	if "shot" in config_mode:
+		shot = config_mode["shot"]
+		aspect_ratio = config["aspect_ratio"]
+		flux_ref = config_mode["flux"]["ref"]
+		generateShotData(shot, aspect_ratio, flux_ref)
+
 	# Load or pre-compute magnetic fields, ohmic power and magnetic energy
 	filename = hashname(config)
 	try: # Load pre-computed data set if it exists
@@ -416,30 +450,46 @@ def run():
 	abs_ener_theta = 1e-3 * si.cumtrapz(np.abs(V_theta * I[:,1]), t, initial=0)
 	tf = config["time"]["tf"]
 
+	mode = config["mode"]
+	if mode not in config:
+		raise ValueError("parameters for mode '%s' missing from config file" % mode)
+	config_mode = config[mode]
+	P_ohm_over_I_phi_shot = np.interp(t, loadVec(config_mode["time"]), loadVec(config_mode["P_ohm_over_I_phi"]))
+	f_shot = np.interp(t, loadVec(config_mode["time"]), loadVec(config_mode["f"]))
+	theta_shot = np.interp(t, loadVec(config_mode["time"]), loadVec(config_mode["theta"]))
+	config_phi = config_mode["toroidal"]
+	I_phi_shot = np.interp(t, loadVec(config_phi["time"]), loadVec(config_phi["current"]))
+	V_phi_shot = np.interp(t, loadVec(config_phi["time"]), loadVec(config_phi["voltage"]))
+	config_theta = config_mode["poloidal"]
+	I_theta_shot = np.interp(t, loadVec(config_theta["time"]), loadVec(config_theta["current"]))
+	V_theta_shot = np.interp(t, loadVec(config_theta["time"]), loadVec(config_theta["voltage"]))
+	config_flux = config_mode["flux"]
+	flux_shot = np.interp(t, loadVec(config_flux["time"]), loadVec(config_flux["value"]))
+
 	plt.rc("font", family="serif")
 
 	plt.subplot(4, 3, 1)
-	plotVphiAndBPCoreFlux(t, V_phi, BP_core_flux)
+	plotVphiAndBPCoreFlux(t, V_phi, BP_core_flux, V_phi_shot)
 	plt.xlim(xmax=tf)
 
 	plt.subplot(4, 3, 2)
-	plotVtheta(t, V_theta)
+	plotVtheta(t, V_theta, V_theta_shot)
 	plt.xlim(xmax=tf)
 
 	plt.subplot(4, 3, 3)
-	plotFlux(t, flux)
+	plotFlux(t, flux, flux_shot)
 	plt.xlim(xmax=tf)
 
 	plt.subplot(4, 3, 4)
-	plotIphi(t, I[:,0], BP_core_flux)
+	plotIphi(t, I[:,0], BP_core_flux, I_phi_shot)
 	plt.xlim(xmax=tf)
 
 	plt.subplot(4, 3, 5)
-	plotItheta(t, I[:,1])
+	plotItheta(t, I[:,1], I_theta_shot)
 	plt.xlim(xmax=tf)
 
 	plt.subplot(4, 3, 6)
-	plotPohmOverIphi(t, P_ohm, I[:,0])
+	plotPohmOverIphi(t, P_ohm, I[:,0], P_ohm_over_I_phi_shot)
 	plt.xlim(xmax=tf)
 
 	plt.subplot(4, 3, 7)
@@ -451,7 +501,7 @@ def run():
 	plt.xlim(xmax=tf)
 
 	plt.subplot(4, 3, 9)
-	plotThetaAndF(t, theta, f)
+	plotThetaAndF(t, theta, f, theta_shot, f_shot)
 	plt.xlim(xmax=tf)
 
 	plt.subplot(4, 3, 10)
@@ -467,6 +517,89 @@ def run():
 	plt.xlim(xmax=tf)
 
 	plt.show()
+
+
+def smoothy(x, win=19, iter=20):
+	w = np.ones(win) / win
+	y = np.copy(x)
+	for i in xrange(iter):
+		y[win/2:-win/2+1] = np.convolve(y, w, mode='valid')
+	return y
+
+def deriv5(x, t):
+	n = len(x)
+	y = np.zeros(n)
+
+	y[0] = -25 * x[0] + 48 * x[1] - 36 * x[2] + 16 * x[3] - 3 * x[4]
+	y[1] = -3 * x[0] - 10 * x[1] + 18 * x[2] - 6 * x[3] + x[4]
+	for i in xrange(2, n-3):
+		y[i] = x[i-2] - 8.0 * x[i-1] + 8.0 * x[i+1] - x[i+2]
+	y[n-2] = 3 * x[n-1] + 10 * x[n-2] - 18 * x[n-3] + 6 * x[n-4] - x[n-5]
+	y[n-1] = 25 * x[n-1] - 48 * x[n-2] + 36 * x[n-3] - 16 * x[n-4] + 3 * x[n-5]
+
+	dt = np.ediff1d(t, to_end=t[-1]-t[-2])
+	return y / 12 / dt
+
+def generateShotData(shot, aspect_ratio, flux_ref):
+	import MDSplus.connection as mdsplus
+	mds = mdsplus.Connection("dave.physics.wisc.edu")
+	mds.openTree("mst", shot) # 1100903060 -> 10-40, 14-NOV-2005
+	try:
+		ip = mds.get(r"\ip").data()
+		# vla = mds.get(r"\vloop_alpha").data()
+		vlp = mds.get(r"\vloop_pfm").data()
+		nel  = mds.get(r"\n_co2").data()
+		vpg = mds.get(r"\vpg").data()
+		# vtg = mds.get(r"\vtg").data()
+		btw = mds.get(r"\btw_b").data()
+		btave = mds.get(r"\btave_b").data()
+		alpha = mds.get(r"\alpha_par").data()
+		minor_b = mds.get(r"\minor_b").data()
+		tm_ip = mds.get(r"dim_of(\ip)").data()
+		tm_nel = mds.get(r"dim_of(\n_co2)").data()
+	finally:
+		mds.closeAllTrees()
+
+	a = minor_b
+	R0 = aspect_ratio * a
+
+	sub = (tm_nel >= tm_ip[0])
+	tn = tm_nel[sub]
+	density = nel[sub]
+
+	offset = np.argwhere(ip > 0.1)[0,0] + 160
+	# offset = 160
+
+	t = tm_ip[offset:]
+
+	alpha = alpha[offset:]
+
+	tn = tn[offset:]
+	density = density[offset:]
+	density = np.maximum(density * 1.0e6, 1.0e18)
+
+	flux = btave[offset:] * 1e-4 * np.pi * a**2
+	flux_multiplier = flux[0] / flux_ref
+
+	V_phi = vpg[offset:]
+	V_theta = smoothy(-deriv5(flux, t))
+
+	I_phi = ip[offset:]
+	I_theta = btw[offset:] * 0.97 * R0 / 2.0e-7 * 1.0e-10
+
+	P_ohm_over_I_phi = vlp[offset:]
+
+	nz = btave[offset:] != 0
+	theta = t * np.nan
+	theta[nz] = 4 * I_phi[nz] / btave[offset:][nz]
+	f = t * np.nan
+	f = btw[offset:][nz] / btave[offset:][nz]
+
+	data = np.column_stack((t, alpha, V_phi, V_theta, flux, I_theta, I_phi, P_ohm_over_I_phi, theta, f))
+	header = "flux_multiplier = {0}".format(flux_multiplier)
+	np.savetxt("realdata.dat", data, header=header)
+	np.savetxt("density.dat", np.column_stack((tn, density)))
+
 
 if __name__ == "__main__":
 	run()
