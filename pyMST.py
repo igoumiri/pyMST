@@ -15,6 +15,7 @@ import numpy as np
 import scipy.integrate as si
 import scipy.interpolate as sp
 import matplotlib.pyplot as plt
+import control
 
 def lmbda(r, alpha, lmbda0):
 	return lmbda0 * (1 - r**alpha)
@@ -76,10 +77,10 @@ def lmbdaDot(B_phi, B_theta, V_phi, V_theta, V_phi_DC, P_ohm, U_mag, U_mag_dot, 
 	den = flux**2 * U_mag_dot
 	return num / den
 
-def lfDot(t, x, time, spl_B_phi, spl_B_theta, V_phi_wave, V_theta_wave, V_phi_DC, spl_P_ohm, spl_U_mag, alpha, a, mu0, eta0, R0):
+def lfDot(t, x, time, spl_B_phi, spl_B_theta, V_phi, V_theta, V_phi_DC, spl_P_ohm, spl_U_mag, alpha, a, mu0, eta0, R0):
 	lmbda0, flux = x
 	B_phi, B_theta = spl_B_phi(lmbda0, alpha), spl_B_theta(lmbda0, alpha)
-	V_phi, V_theta = np.interp(t, time, V_phi_wave), np.interp(t, time, V_theta_wave)
+	# V_phi, V_theta = np.interp(t, time, V_phi_wave), np.interp(t, time, V_theta_wave)
 	P_ohm = spl_P_ohm(lmbda0, alpha)
 	U_mag = spl_U_mag(lmbda0, alpha)
 	U_mag_dot = spl_U_mag(lmbda0, alpha, dx=1)
@@ -216,8 +217,11 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 	flux = np.zeros(num_t)
 	lmbda0 = np.zeros(num_t)
 	I = np.zeros((num_t, 2)) # Current
+	V = np.zeros((num_t, 2)) # Voltage
 	P_ohm = np.zeros(num_t)
 	eta0 = np.zeros(num_t)
+	xh = np.zeros((num_t, 3)) # estimated state (quick and dirty)
+	xi = np.zeros((num_t, 3)) # integral state (quick and dirty)
 
 	# Initial conditions
 	I[0,0] = config["initial"]["I_phi"]
@@ -227,14 +231,21 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 	I[0,1] = spl_B_phi(lmbda0[0], alpha) * flux[0] * R0 / (a**2 * mu0)
 
 	# Time integration
+	controller = control.LQG(config["control"])
 	solver = si.ode(lfDot)
 	solver.set_integrator("dopri5")
 	solver.set_initial_value([lmbda0[0], flux[0]], t[0])
+	V[0,:] = V_phi_wave[0], V_theta_wave[0]
 	for i in xrange(1, num_t):
+		if t[i] < config["control"]["t0"]:
+			V[i,:] = V_phi_wave[i], V_theta_wave[i]
+			controller.observe(V[i-1,:], I[i-1,:], xh, xi, i)
+		else:
+			V[i,:] = controller.control(I[i-1,:], xh, xi, i)
 		eta0[i] = zanom_wave[i-1] * 1.6 * 7.75e-4 * zohm / Te0(I[i-1,0], density[i-1], a)**1.5
 		if mode is "PPCD_550KA":
 			eta0[i] /= PPCD_Te_mult[i-1]**1.5
-		solver.set_f_params(t, spl_B_phi, spl_B_theta, V_phi_wave, V_theta_wave, V_phi_DC, spl_P_ohm, spl_U_mag, alpha, a, mu0, eta0[i], R0)
+		solver.set_f_params(t, spl_B_phi, spl_B_theta, V[i,0], V[i,1], V_phi_DC, spl_P_ohm, spl_U_mag, alpha, a, mu0, eta0[i], R0)
 		lmbda0[i], flux[i] = solver.integrate(t[i])
 		B_phi, B_theta = spl_B_phi(lmbda0[i], alpha), spl_B_theta(lmbda0[i], alpha)
 		I[i,0] = B_theta * flux[i] / (a * mu0)
@@ -248,7 +259,15 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 			# t[i:] = np.nan # strip plots
 			break
 
-	return t, I, flux, P_ohm, eta0, V_phi_wave, V_theta_wave
+	# plt.subplot(3, 1, 1)
+	# plt.plot(t, xh[:,0])
+	# plt.subplot(3, 1, 2)
+	# plt.plot(t, xh[:,1])
+	# plt.subplot(3, 1, 3)
+	# plt.plot(t, xh[:,2])
+	# plt.show()
+
+	return t, I, flux, P_ohm, eta0, V[:,0], V[:,1]
 
 def plotVphiAndBPCoreFlux(t, V_phi, BP_core_flux, V_phi_shot=None):
 	if V_phi_shot is not None:
@@ -284,7 +303,7 @@ def plotIphi(t, I_phi, BP_core_flux, I_phi_shot=None):
 	if I_phi_shot is not None:
 		plt.plot(t, I_phi_shot, color="red")
 	plt.plot(t, 1e-3 * I_phi)
-	plt.plot(t, np.exp(7 * BP_core_flux / 0.58) * 0.67e-3)
+	# plt.plot(t, np.exp(7 * BP_core_flux / 0.58) * 0.67e-3)
 	plt.xlabel("Time (s)")
 	plt.ylabel("Current (kA)")
 	plt.title(r"$I_\phi$ & $I_\mathrm{mag}$")
@@ -442,8 +461,8 @@ def run():
 	f = t * np.nan
 	theta = t * np.nan
 	nz = flux != 0
-	f[nz] = mu0 * a**2 * I[nz,1] / (2 * R0 * flux[nz])
-	theta[nz] = mu0 * a * I[nz,0] / (2 * flux[nz])
+	f[nz] = mu0 * a**2 * I[nz,1] / (2 * R0 * flux[nz]) # B_phi / 2
+	theta[nz] = mu0 * a * I[nz,0] / (2 * flux[nz]) # B_theta / 2
 	ener_phi = 1e-3 * si.cumtrapz(V_phi * I[:,0], t, initial=0)
 	abs_ener_phi = 1e-3 * si.cumtrapz(np.abs(V_phi * I[:,0]), t, initial=0)
 	ener_theta = 1e-3 * si.cumtrapz(V_theta * I[:,1], t, initial=0)

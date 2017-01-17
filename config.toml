@@ -47,12 +47,72 @@ mode = "STD_400KA_realdata"
 [initial]
 	I_phi = 100.0
 
+
+[control]
+	A = [
+		[ 9.99833264e-1, 0.00000000e+0, 0.00000000e+0 ],
+		[ 0.00000000e+0, 9.92161572e-1, 9.06795864e-3 ],
+		[ 0.00000000e+0, -9.06795864e-3, 9.92161572e-1 ],
+	]
+	B = [
+		[ -1.76979717e-7, -1.57181252e-7 ],
+		[ -7.68392060e-7, 1.90373748e-6 ],
+		[ -4.50629846e-6, 7.38955344e-5 ],
+	]
+	C = [
+		[ -1.68068042e+7, 2.91694233e+4, 3.75255957e+4 ],
+		[ 6.25909072e+6, 1.80719062e+6, 1.10632945e+6 ],
+		[ 0.00000000e+0, 0.00000000e+0, 0.00000000e+0 ],
+	]
+	D = [
+		[ 0.00000000e+0, 0.00000000e+0 ],
+		[ 0.00000000e+0, 0.00000000e+0 ],
+		[ 0.00000000e+0, 1.00000000e+0 ],
+	]
+	F = [
+		[ 9.27715104e-3, -2.26687996e-3, 1.58350689e+1 ],
+		[ 1.17956221e-3, 6.44476406e-3, 1.18308678e+0 ],
+	]
+	K = [
+		[ -1.70106459e+5, -1.50070493e+3, -9.45630051e+2 ],
+		[ 2.05136928e+4, 1.15736118e+4, 7.35239973e+3 ],
+	]
+	Ki = [
+		[ -9.75692411e-4, 1.11839479e-4, -2.16743266e-4 ],
+		[ -1.21531362e-4, -6.53006181e-4, -5.07786558e-4 ],
+	]
+	L = [
+		[ -5.89592081e-8, 1.45125395e-9, 0.00000000e+0 ],
+		[ 1.06852642e-7, 2.86969980e-7, 0.00000000e+0 ],
+		[ 1.59019478e-7, 4.26913514e-7, 0.00000000e+0 ],
+	]
+	xd = [
+		[ -1.61075186e-2 ],
+		[ -1.38036951e-2 ],
+		[ -8.34803019e-3 ],
+	]
+	ud = [
+		[ 4.22572065e+1 ],
+		[ -1.43464752e-11 ],
+	]
+	r = [
+		[ 2.70000000e+5 ],
+		[ -1.35000000e+5 ],
+		[ 0.00000000e+0 ],
+	]
+
+	t0 = 0.025
+	dt = 1.0e-5
+
+
 [STD_400KA_realdata]
 	shot = 1100903060
 	time = { file = "realdata.dat", column = 1 }
 	P_ohm_over_I_phi = { file = "realdata.dat", column = 8 }
 	theta = { file = "realdata.dat", column = 9 }
 	f = { file = "realdata.dat", column = 10 }
+	density_ref = 8.0e18
+	density_multiplier = 1
 [STD_400KA_realdata.alpha]
 	time = { file = "realdata.dat", column = 1 }
 	value = { file = "realdata.dat", column = 2 }
@@ -61,9 +121,9 @@ mode = "STD_400KA_realdata"
 	multiplier = 0.880962371631
 	time = { file = "realdata.dat", column = 1 }
 	value = { file = "realdata.dat", column = 5 }
-[STD_400KA_realdata.density]
-	time = { file = "density.dat", column = 1 }
-	value = { file = "density.dat", column = 2 }
+# [STD_400KA_realdata.density]
+# 	time = { file = "density.dat", column = 1 }
+# 	value = { file = "density.dat", column = 2 }
 [STD_400KA_realdata.toroidal] # phi
 	time = { file = "realdata.dat", column = 1 }
 	current = { file = "realdata.dat", column = 7 }
