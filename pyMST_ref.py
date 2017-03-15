@@ -15,7 +15,7 @@ import numpy as np
 import scipy.integrate as si
 import scipy.interpolate as sp
 import matplotlib.pyplot as plt
-import control
+import control_ref as control
 
 def lmbda(r, alpha, lmbda0):
 	return lmbda0 * (1 - r**alpha)
@@ -230,6 +230,9 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 	eta0 = np.zeros(num_t)
 	xh = np.zeros((num_t, 5)) # estimated state (quick and dirty)
 	xi = np.zeros((num_t, 2)) # integral state (quick and dirty)
+	vh = np.zeros((num_t, 2)) # unsaturated input (quick and dirty)
+	r1 = np.mat(config["control"]["r1"]) # desired output 1 (quick and dirty)
+	r2 = np.mat(config["control"]["r2"]) # desired output 2 (quick and dirty)
 
 	# Initial conditions
 	I[0,0] = config["initial"]["I_phi"]
@@ -244,20 +247,21 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 
 	# Time integration
 	controller = control.LQG(config["control"])
+	controller_lin = control.LQG(config["control"])
 	solver = si.ode(lfDot)
 	solver.set_integrator("dopri5")
 	solver.set_initial_value([lmbda0[0], flux[0]], t[0])
 	V[0,:] = V_phi_wave[0], V_theta_wave[0]
 	for i in xrange(1, num_t):
-		# F = I[i-1,1] * mu0 * a**2 / (flux[i-1] * 2 * R_star)
-		# y = [I[i-1,0] * 1e-6, F]
 		y = lmbda0[i-1], flux[i-1]
-		if t[i] < config["control"]["t0"]:
+		if t[i] < config["control"]["t1"]:
 			V[i,:] = V_phi_wave[i], V_theta_wave[i]
 			controller.observe(V[i-1,:], y, xh, xi, i)
+		elif t[i] < config["control"]["t2"]:
+			V[i,:] = controller.control(r1, y, xh, xi, vh, i)
 		else:
-			V[i,:] = controller.control(y, xh, xi, i)
-			# V[i,1] = -V[i,1] # negative V_theta
+			V[i,:] = controller.control(r2, y, xh, xi, vh, i)
+
 		eta0[i] = zanom_wave[i-1] * 1.6 * 7.75e-4 * zohm / Te0(I[i-1,0], density[i-1], a)**1.5
 		if mode is "PPCD_550KA":
 			eta0[i] /= PPCD_Te_mult[i-1]**1.5
@@ -275,21 +279,29 @@ def calc(list_lmbda0, list_alpha, grid_B_phi, grid_B_theta, grid_P_ohm, grid_U_m
 			# t[i:] = np.nan # strip plots
 			break
 
+	yh = np.asarray(np.mat(xh) * controller.C.T + np.tile(controller.r0.T, (num_t, 1)))
 	plt.subplot(2, 1, 1)
-	yh = np.asarray(np.mat(xh) * controller.C.T)
-	plt.plot(t, lmbda0, t, yh[:,0])
+	plt.plot(t, lmbda0, '-', t, yh[:,0], '--')
 	plt.ylabel("lambda_0")
 	plt.grid()
 	plt.subplot(2, 1, 2)
-	plt.plot(t, flux, t, yh[:,1])
+	plt.plot(t, flux, '-', t, yh[:,1], '--')
 	plt.ylabel("flux")
 	plt.grid()
 	plt.figure()
 
-	Vh = np.asarray(np.tile(controller.ud.T, (num_t, 1)) + (np.tile(controller.xd.T, (num_t, 1)) - np.mat(xh)) * controller.K.T - np.mat(xi) * controller.Ki.T)
-	plt.plot(t, V[:,1], t, Vh[:,1])
+	plt.subplot(2, 1, 1)
+	plt.plot(t, V[:,0], t, vh[:,0])
+	plt.ylabel("V_phi")
+	plt.grid()
+	plt.subplot(2, 1, 2)
+	plt.plot(t, V[:,1], t, vh[:,1])
 	plt.ylabel("V_theta")
+	plt.grid()
 	plt.figure()
+
+	# plt.show()
+	# sys.exit(0)
 
 	return t, I, lmbda0, flux, P_ohm, eta0, V[:,0], V[:,1]
 
