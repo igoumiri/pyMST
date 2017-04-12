@@ -112,10 +112,16 @@ def preCalc(config):
 	list_lmbda0, num_lmbda0 = linspace(config["lambda_0"])
 	list_alpha, num_alpha = linspace(config["alpha"])
 
+	a = config["a"]
+	mu0 = config["mu0"]
+
 	B_phi = np.empty((num_lmbda0, num_alpha))
 	B_theta = np.empty((num_lmbda0, num_alpha))
 	P_ohm = np.empty((num_lmbda0, num_alpha))
 	U_mag = np.empty((num_lmbda0, num_alpha))
+	Phi = np.empty((num_lmbda0, num_alpha))
+	Ip = np.empty((num_lmbda0, num_alpha))
+	F = np.empty((num_lmbda0, num_alpha))
 
 	for (i, lmbda0) in enumerate(list_lmbda0):
 		for (j, alpha) in enumerate(list_alpha):
@@ -125,8 +131,11 @@ def preCalc(config):
 			B_theta[i,j] = B[-1,1] / flux
 			P_ohm[i,j] = Pohm(r, B, lmbda(r, alpha, lmbda0)) / flux**2
 			U_mag[i,j] = Umag(r, B) / flux**2
+			Phi[i,j] = flux
+			Ip[i,j] = (2 * np.pi * a * B[-1,1]) / mu0
+			F[i,j] = B[-1,0] / si.simps(B[:,0], r)
 
-	return list_lmbda0, list_alpha, B_phi, B_theta, P_ohm, U_mag
+	return list_lmbda0, list_alpha, B_phi, B_theta, P_ohm, U_mag, Phi, Ip, F
 
 def loadVec(config):
 	if "file" in config:
@@ -475,15 +484,21 @@ def run():
 			B_theta = file["B_theta"][:]
 			P_ohm = file["P_ohm"][:]
 			U_mag = file["U_mag"][:]
+			Phi = file["Phi"][:]
+			Ip = file["Ip"][:]
+			F = file["F"][:]
 	except: # Otherwise, pre-compute and save the results
 		with h5py.File(filename, "w") as file:
-			lmbda0, alpha, B_phi, B_theta, P_ohm, U_mag = preCalc(config)
+			lmbda0, alpha, B_phi, B_theta, P_ohm, U_mag, Phi, Ip, F = preCalc(config)
 			file.create_dataset("lambda_0", data=lmbda0)
 			file.create_dataset("alpha", data=alpha)
 			file.create_dataset("B_phi", data=B_phi)
 			file.create_dataset("B_theta", data=B_theta)
 			file.create_dataset("P_ohm", data=P_ohm)
 			file.create_dataset("U_mag", data=U_mag)
+			file.create_dataset("Phi", data=Phi)
+			file.create_dataset("Ip", data=Ip)
+			file.create_dataset("F", data=F)
 
 	# Run program
 	t, I, lmbda0, flux, P_ohm, eta0, V_phi, V_theta = calc(lmbda0, alpha, B_phi, B_theta, P_ohm, U_mag, config)
