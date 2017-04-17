@@ -30,7 +30,7 @@ def run(config):
 	ctrl = controller.LQG(config["control"])
 
 	# Init reference signal (converting parameters if necessary)
-	ref = reference.Basic(params, config["control"])
+	ref = reference.Adhoc(params, config["control"])
 
 	# Init output plotter (will plot on exit)
 	with output.Plotter(config) as out:
