@@ -10,7 +10,7 @@ import numpy as np
 import scipy.integrate as si
 import scipy.interpolate as sp
 
-from utils import hashname, generateShotData
+from utils import hashname, generateShotData, linspace
 
 
 def lmbda(r, alpha, lmbda0):
@@ -59,70 +59,85 @@ class LookupTable:
 		filename = hashname(config)
 		try: # Load pre-computed data set if it exists
 			with h5py.File(filename, "r") as file:
-				lmbda0 = file["lambda_0"][:]
 				alpha = file["alpha"][:]
+				lmbda0 = file["lambda_0"][:]
+				flux = file["flux"][:]
 				B_phi = file["B_phi"][:]
 				B_theta = file["B_theta"][:]
 				P_ohm = file["P_ohm"][:]
 				U_mag = file["U_mag"][:]
-				Phi = file["Phi"][:]
 				Ip = file["Ip"][:]
 				F = file["F"][:]
 		except: # Otherwise, pre-compute and save the results
 			with h5py.File(filename, "w") as file:
-				lmbda0, alpha, B_phi, B_theta, P_ohm, U_mag, Phi, Ip, F = self.preCalc(config)
-				file.create_dataset("lambda_0", data=lmbda0)
+				alpha, lmbda0, flux, B_phi, B_theta, P_ohm, U_mag, Ip, F = self.preCalc(config)
 				file.create_dataset("alpha", data=alpha)
+				file.create_dataset("lambda_0", data=lmbda0)
+				file.create_dataset("flux", data=flux)
 				file.create_dataset("B_phi", data=B_phi)
 				file.create_dataset("B_theta", data=B_theta)
 				file.create_dataset("P_ohm", data=P_ohm)
 				file.create_dataset("U_mag", data=U_mag)
-				file.create_dataset("Phi", data=Phi)
 				file.create_dataset("Ip", data=Ip)
 				file.create_dataset("F", data=F)
 
 		# Make splines for magnetic fields, ohmic power and magnetic energy
-		self.B_phi = sp.RectBivariateSpline(lmbda0, alpha, B_phi)
-		self.B_theta = sp.RectBivariateSpline(lmbda0, alpha, B_theta)
-		self.P_ohm = sp.RectBivariateSpline(lmbda0, alpha, P_ohm)
-		self.U_mag = sp.RectBivariateSpline(lmbda0, alpha, U_mag)
+		self.B_phi = sp.RectBivariateSpline(alpha, lmbda0, B_phi)
+		self.B_theta = sp.RectBivariateSpline(alpha, lmbda0, B_theta)
+		self.P_ohm = sp.RectBivariateSpline(alpha, lmbda0, P_ohm)
+		self.U_mag = sp.RectBivariateSpline(alpha, lmbda0, U_mag)
 
 		# One more spline
 		fixed_alpha = 4.0 # FIXME: using hardcoded fixed alpha for now
-		fixed_B_theta = sp.interp1d(alpha, B_theta)(fixed_alpha)
-		self.lmbda0 = sp.CubicSpline(fixed_B_theta, lmbda0, bc_type="natural")
+		fixed_B_theta = sp.interp1d(alpha, B_theta, axis=0)(fixed_alpha)
+		self.B_theta_to_lmbda0 = sp.CubicSpline(fixed_B_theta, lmbda0, bc_type="natural")
 
-		# TODO: make "translation" interpolators
+		# "translation" interpolators
+		index_alpha = np.nonzero(alpha == fixed_alpha)[0][0] # FIXME: at least interpolate
+		fixed_F = F[index_alpha,:,:]
+		fixed_Ip = Ip[index_alpha,:,:]
+		points = np.empty((fixed_F.size, 2))
+		lmbda0_values = np.empty(fixed_F.size)
+		flux_values = np.empty(fixed_F.size)
+		for (i, l0) in enumerate(lmbda0):
+			for (j, fl) in enumerate(flux):
+				k = i*flux.size+j
+				points[k,:] = [fixed_F[i,j], fixed_Ip[i,j]]
+				lmbda0_values[k] = l0
+				flux_values[k] = fl
+
+		self.lmbda0 = sp.CloughTocher2DInterpolator(points, lmbda0_values, rescale=True)
+		self.flux = sp.CloughTocher2DInterpolator(points, flux_values, rescale=True)
 
 
 	def preCalc(self, config):
-		list_lmbda0, num_lmbda0 = linspace(config["lambda_0"])
 		list_alpha, num_alpha = linspace(config["alpha"])
+		list_lmbda0, num_lmbda0 = linspace(config["lambda_0"])
+		list_flux, num_flux = linspace(config["flux"])
 
 		a = config["a"]
 		mu0 = config["mu0"]
 
-		B_phi = np.empty((num_lmbda0, num_alpha))
-		B_theta = np.empty((num_lmbda0, num_alpha))
-		P_ohm = np.empty((num_lmbda0, num_alpha))
-		U_mag = np.empty((num_lmbda0, num_alpha))
-		Phi = np.empty((num_lmbda0, num_alpha))
-		Ip = np.empty((num_lmbda0, num_alpha))
-		F = np.empty((num_lmbda0, num_alpha))
+		B_phi = np.empty((num_alpha, num_lmbda0))
+		B_theta = np.empty((num_alpha, num_lmbda0))
+		P_ohm = np.empty((num_alpha, num_lmbda0))
+		U_mag = np.empty((num_alpha, num_lmbda0))
+		Ip = np.empty((num_alpha, num_lmbda0, num_flux))
+		F = np.empty((num_alpha, num_lmbda0, num_flux))
 
-		for (i, lmbda0) in enumerate(list_lmbda0):
-			for (j, alpha) in enumerate(list_alpha):
+		for (i, alpha) in enumerate(list_alpha):
+			for (j, lmbda0) in enumerate(list_lmbda0):
 				r, B = self.calcB(lmbda0, alpha, config)
 				flux = si.simps(r * B[:,0], r)
 				B_phi[i,j] = B[-1,0] / flux
 				B_theta[i,j] = B[-1,1] / flux
 				P_ohm[i,j] = Pohm(r, B, lmbda(r, alpha, lmbda0)) / flux**2
 				U_mag[i,j] = Umag(r, B) / flux**2
-				Phi[i,j] = flux
-				Ip[i,j] = (2 * np.pi * a * B[-1,1]) / mu0
-				F[i,j] = B[-1,0] / si.simps(B[:,0], r)
+				for (k, phi) in enumerate(list_flux):
+					Ip[i,j,k] = B[-1,1] * phi / (a * mu0 * flux)
+					F[i,j,k] = B[-1,0] / (2 * flux)
 
-		return list_lmbda0, list_alpha, B_phi, B_theta, P_ohm, U_mag, Phi, Ip, F
+		return list_alpha, list_lmbda0, list_flux, B_phi, B_theta, P_ohm, U_mag, Ip, F
 
 
 	def calcB(self, lmbda0, alpha, config):

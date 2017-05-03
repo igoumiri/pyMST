@@ -107,9 +107,9 @@ class MST:
 
 		# Initialize state variables
 		self.flux = flux0
-		self.lmbda0 = params.lmbda0(self.mu0 * self.a * I_phi_0 / flux0)
+		self.lmbda0 = params.B_theta_to_lmbda0(self.mu0 * self.a * I_phi_0 / flux0)
 		self.I_phi = I_phi_0
-		self.I_theta = self.spl_B_phi(self.lmbda0, self.alpha) * flux0 * self.R0 / (self.a**2 * self.mu0)
+		self.I_theta = self.spl_B_phi(self.alpha, self.lmbda0) * flux0 * self.R0 / (self.a**2 * self.mu0)
 		self.V_phi = self.V_phi_wave(t[0])
 		self.V_theta = self.V_theta_wave(t[0])
 		self.P_ohm = 0.0
@@ -138,11 +138,11 @@ class MST:
 
 		self.lmbda0, self.flux = self.solver.integrate(t)
 
-		B_phi = self.spl_B_phi(self.lmbda0, self.alpha)
-		B_theta = self.spl_B_theta(self.lmbda0, self.alpha)
+		B_phi = self.spl_B_phi(self.alpha, self.lmbda0)
+		B_theta = self.spl_B_theta(self.alpha, self.lmbda0)
 		self.I_phi = B_theta * self.flux / (self.a * self.mu0)
 		self.I_theta = B_phi * self.flux * self.R0 / (self.a**2 * self.mu0)
-		self.P_ohm = self.spl_P_ohm(self.lmbda0, self.alpha) * self.flux**2 * self.eta0 * self.R0 / (self.a**4 * self.mu0**2)
+		self.P_ohm = self.spl_P_ohm(self.alpha, self.lmbda0) * self.flux**2 * self.eta0 * self.R0 / (self.a**4 * self.mu0**2)
 
 		if not self.solver.successful():
 			raise UserWarning("Warning: Integration failed at t={0}".format(t))
@@ -155,11 +155,11 @@ class MST:
 
 	def lmbdaDot(self, lmbda0, flux):
 		# Evaluate splines
-		B_phi = self.spl_B_phi(lmbda0, self.alpha)
-		B_theta = self.spl_B_theta(lmbda0, self.alpha)
-		P_ohm = self.spl_P_ohm(lmbda0, self.alpha)
-		U_mag = self.spl_U_mag(lmbda0, self.alpha)
-		U_mag_dot = self.spl_U_mag(lmbda0, self.alpha, dx=1)
+		B_phi = self.spl_B_phi(self.alpha, lmbda0)
+		B_theta = self.spl_B_theta(self.alpha, lmbda0)
+		P_ohm = self.spl_P_ohm(self.alpha, lmbda0)
+		U_mag = self.spl_U_mag(self.alpha, lmbda0)
+		U_mag_dot = self.spl_U_mag(self.alpha, lmbda0, dx=1)
 
 		# Evaluate currents and dissipation power
 		I_phi = B_theta * flux / (self.a * self.mu0)

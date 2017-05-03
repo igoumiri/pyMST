@@ -192,8 +192,18 @@ class Plotter:
 
 	def __exit__(self, type, value, traceback):
 		# Do not plot if there is an exception
-		if isinstance(value, Exception):
+		if isinstance(value, Exception) and not isinstance(value, StopIteration):
 			return False
+
+		# Fill remaining space with nans
+		self.flux[self.index:] = np.nan
+		self.lmbda0[self.index:] = np.nan
+		self.I_phi[self.index:] = np.nan
+		self.I_theta[self.index:] = np.nan
+		self.V_phi[self.index:] = np.nan
+		self.V_theta[self.index:] = np.nan
+		self.P_ohm[self.index:] = np.nan
+		self.eta0[self.index:] = np.nan
 
 		# Show all plots
 		self.plotAll()

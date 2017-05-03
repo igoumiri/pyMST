@@ -46,6 +46,11 @@ save = "output_{0}.dat"
 	ndiv = 400 # => step = 0.01
 	# ndiv = 40 # => step = 0.1
 
+[flux]
+	min = 0.001
+	max = 0.2
+	ndiv = 20
+
 [initial]
 	I_phi = 100.0
 	# I_phi = 1.253e5 # -32.99 # 2.4111e5
@@ -121,8 +126,6 @@ save = "output_{0}.dat"
 		[ 0.0 ],
 	]
 
-	Theta1 = 1.35
-	Theta2 = 0.96
 	F1 = 0.11
 	F2 = 0.55
 	Ip1 = 169.0e3

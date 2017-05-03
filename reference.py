@@ -20,16 +20,17 @@ class Basic:
 		else:
 			return self.r2
 
-class Adhoc:
+class Translator:
 	def __init__(self, params, config):
-		from adhoc import adhoc
-		eq1 = adhoc.f_theta_to_eq(Theta=config["Theta1"], F=config["F1"], ip=config["Ip1"])
-		eq2 = adhoc.f_theta_to_eq(Theta=config["Theta2"], F=config["F2"], ip=config["Ip2"])
+		F1 = config["F1"]
+		F2 = config["F2"]
+		Ip1 = config["Ip1"]
+		Ip2 = config["Ip2"]
 
 		self.t1 = config["t1"]
 		self.t2 = config["t2"]
-		self.r1 = [[eq1['pars'][0][0]], [eq1['Phi']]]
-		self.r2 = [[eq2['pars'][0][0]], [eq2['Phi']]]
+		self.r1 = [[params.lmbda0(F1, Ip1)], [params.flux(F1, Ip1)]]
+		self.r2 = [[params.lmbda0(F2, Ip2)], [params.flux(F2, Ip2)]]
 
 	def __call__(self, t):
 		if t < self.t1:
