@@ -55,6 +55,14 @@ save = "output_{0}.dat"
 	I_phi = 100.0
 	# I_phi = 1.253e5 # -32.99 # 2.4111e5
 
+[primary]
+	coeff_phi = 1.0
+	coeff_theta = 1.0
+	R_phi = 1.0
+	R_theta = 1.0
+	L_phi = 1.0
+	L_theta = 1.0
+
 
 [control]
 	A = [

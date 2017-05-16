@@ -172,7 +172,6 @@ class Plotter:
 		self.flux_shot = np.interp(self.t, loadVec(config_flux["time"]), loadVec(config_flux["value"]))
 
 		# Init arrays, hopefully with their final size, otherwise expandable
-		self.t = np.zeros(num_t)
 		self.flux = np.zeros(num_t)
 		self.lmbda0 = np.zeros(num_t)
 		self.I_phi = np.zeros(num_t)
@@ -181,9 +180,35 @@ class Plotter:
 		self.V_theta = np.zeros(num_t)
 		self.P_ohm = np.zeros(num_t)
 		self.eta0 = np.zeros(num_t)
+		self.I_phi_primary = np.zeros(num_t)
+		self.I_theta_primary = np.zeros(num_t)
 
 		# Current index
 		self.index = 1
+
+		# Convert voltages to primary current
+		config_primary = config["primary"]
+		self.coeff_phi = config_primary["coeff_phi"]
+		self.coeff_theta = config_primary["coeff_theta"]
+		self.R_phi = config_primary["R_phi"]
+		self.R_theta = config_primary["R_theta"]
+		self.L_phi = config_primary["L_phi"]
+		self.L_theta = config_primary["L_theta"]
+		self.solver = si.ode(self.primaryCurrentDot)
+		self.solver.set_integrator("dopri5")
+		self.solver.set_initial_value([self.V_phi_shot[0], self.V_theta_shot[0]], self.t[0])
+
+
+	def primaryCurrentDot(self, t, x, u):
+		I_phi, I_theta = x
+		if u is not None:
+			V_phi, V_theta = u
+		else:
+			V_phi = self.V_phi_shot[self.index]
+			V_theta = self.V_theta_shot[self.index]
+		I_phi_dot = (self.coeff_phi * V_phi - self.R_phi * I_phi) / self.L_phi
+		I_theta_dot = (self.coeff_theta * V_theta - self.R_theta * I_theta) / self.L_theta
+		return [I_phi_dot, I_theta_dot]
 
 
 	def __enter__(self):
@@ -204,6 +229,8 @@ class Plotter:
 		self.V_theta[self.index:] = np.nan
 		self.P_ohm[self.index:] = np.nan
 		self.eta0[self.index:] = np.nan
+		self.I_phi_primary[self.index:] = np.nan
+		self.I_theta_primary[self.index:] = np.nan
 
 		# Show all plots
 		self.plotAll()
@@ -223,6 +250,12 @@ class Plotter:
 		self.V_theta[i] = mst.V_theta
 		self.P_ohm[i] = mst.P_ohm
 		self.eta0[i] = mst.eta0
+
+		# Convert voltages to primary current
+		self.solver.set_f_params(u)
+		self.solver.integrate(t)
+		self.I_phi_primary[i] = self.solver.y[0]
+		self.I_theta_primary[i] = self.solver.y[1]
 
 		# Increment current index
 		self.index += 1
@@ -244,6 +277,21 @@ class Plotter:
 		# Plot
 		plt.rc("font", family="serif")
 
+		plt.figure()
+		plt.subplot(1, 2, 1)
+		plt.plot(self.t, 1e-3 * self.I_phi_primary)
+		plt.xlabel("Time (s)")
+		plt.ylabel("Current (kA)")
+		plt.title(r"$I_\phi^primary$")
+		plt.grid()
+		plt.subplot(1, 2, 2)
+		plt.plot(self.t, 1e-6 * self.I_theta_primary)
+		plt.xlabel("Time (s)")
+		plt.ylabel("Current (MA)")
+		plt.title(r"$I_\theta^primary$")
+		plt.grid()
+
+		plt.figure()
 		plt.subplot(4, 3, 1)
 		plotVphiAndBPCoreFlux(self.t, self.V_phi, BP_core_flux, self.V_phi_shot)
 		plt.xlim(xmax=self.tf)

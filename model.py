@@ -159,7 +159,7 @@ class MST:
 		B_theta = self.spl_B_theta(self.alpha, lmbda0)
 		P_ohm = self.spl_P_ohm(self.alpha, lmbda0)
 		U_mag = self.spl_U_mag(self.alpha, lmbda0)
-		U_mag_dot = self.spl_U_mag(self.alpha, lmbda0, dx=1)
+		U_mag_dot = self.spl_U_mag(self.alpha, lmbda0, dy=1)
 
 		# Evaluate currents and dissipation power
 		I_phi = B_theta * flux / (self.a * self.mu0)
